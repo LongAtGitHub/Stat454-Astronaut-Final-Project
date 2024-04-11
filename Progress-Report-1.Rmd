@@ -1,0 +1,54 @@
+---
+title: "STAT454Project"
+author: "Rana Rishmawi, Khaleesi Chen, Long Truong"
+date: "2024-04-10"
+output: html_document
+---
+## Research goals
+There are plenty we want to look at
+1. Analyze the evolution of space missions over time, such as changes in the frequency of missions, duration (hours in mission), and the shift from military to civilian astronauts. This could offer insights into how space exploration has evolved from the Cold War era to the present day.
+To answer the research question, we would like to concentrate on the mission time total taken based on related variables. Hierarchical modeling is a method that we first think of to tackle the task.
+## Data background
+The dataset, meticulously compiled from various sources including NASA, Roscosmos, and enthusiast-driven websites, offers information of astronautical information. It encapsulates a wide array of data points ranging from the astronauts' full names, gender, birth dates, and nationalities, to their military status and details regarding their selection programs.
+It is gathered and cleaned by a TidyTuesday contributor named Tom Mock.
+```{r, message = FALSE}
+library(bayesrules)
+library(tidyverse)
+library(rstanarm)
+library(broom.mixed)
+library(tidybayes)
+library(bayesplot)
+astronauts <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-07-14/astronauts.csv')
+```
+```{r}
+# Display information about the dataset
+dim(astronauts)  # Number of rows and columns
+names(astronauts)  # Column names
+head(astronauts)  # First few rows
+str(astronauts)  # Structure of the dataset
+# Summarize the dataset
+summary(astronauts)
+astronauts %>%
+  count(in_orbit, sort = TRUE)
+```
+```{r}
+astronauts %>%
+  mutate(
+    year_of_mission = 10 * (year_of_mission %/% 10),
+    year_of_mission = factor(year_of_mission)
+  ) %>%
+  ggplot(aes(year_of_mission, hours_mission,
+    fill = year_of_mission, color = year_of_mission
+  )) +
+  geom_boxplot(alpha = 0.2, size = 1.5, show.legend = FALSE) +
+  scale_y_log10() +
+  labs(x = NULL, y = "Duration of mission in hours")
+# Scatter plot of career length vs. mission hours
+ggplot(astronauts, aes(x = total_hrs_sum, y = hours_mission)) +
+  geom_point() +
+  labs(title = "Career Length vs. Mission Hours",
+       x = "Total Career Hours",
+       y = "Mission Duration (hours)")
+```
+```{r}
+```
