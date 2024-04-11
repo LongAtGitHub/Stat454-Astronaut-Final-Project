@@ -4,14 +4,13 @@ author: "Rana Rishmawi, Khaleesi Chen, Long Truong"
 date: "2024-04-10"
 output: html_document
 ---
-## Research goals
+## Research goals 1
 There are plenty we want to look at
 1. Analyze the evolution of space missions over time, such as changes in the frequency of missions, duration (hours in mission), and the shift from military to civilian astronauts. This could offer insights into how space exploration has evolved from the Cold War era to the present day.
 To answer the research question, we would like to concentrate on the mission time total taken based on related variables. Hierarchical modeling is a method that we first think of to tackle the task.
 ## Data background
 The dataset, meticulously compiled from various sources including NASA, Roscosmos, and enthusiast-driven websites, offers information of astronautical information. It encapsulates a wide array of data points ranging from the astronauts' full names, gender, birth dates, and nationalities, to their military status and details regarding their selection programs.
 It is gathered and cleaned by a TidyTuesday contributor named Tom Mock.
-
 ```{r, message = FALSE}
 library(bayesrules)
 library(tidyverse)
@@ -21,7 +20,6 @@ library(tidybayes)
 library(bayesplot)
 astronauts <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-07-14/astronauts.csv')
 ```
-
 ```{r}
 # Display information about the dataset
 dim(astronauts)  # Number of rows and columns
@@ -32,8 +30,8 @@ str(astronauts)  # Structure of the dataset
 summary(astronauts)
 astronauts %>%
   count(in_orbit, sort = TRUE)
+names(astronauts)
 ```
-
 ```{r}
 astronauts %>%
   mutate(
@@ -53,10 +51,51 @@ ggplot(astronauts, aes(x = total_hrs_sum, y = hours_mission)) +
        x = "Total Career Hours",
        y = "Mission Duration (hours)")
 ```
+```{r}
+library(dplyr)
+
+# Filter out rows with 0 hours_mission
+astronauts <- astronauts %>%
+  filter(hours_mission != 0)
+
+# Display the first few rows of the filtered dataset
+head(astronauts)
+library(dplyr)
+
+# Log-transform the hours_mission variable
+log_transformed_astronauts <- astronauts %>%
+  mutate(log_hours_mission = log(hours_mission))  # Adding 1 to avoid log(0)
+
+# Display the first few rows of the dataset with the log-transformed variable
+head(log_transformed_astronauts)
+```
 
 ```{r}
-hierarchical_model <- stan_glmer(
-  hours_mission ~ (1 | name), data = astronauts,
+complete_pooled <- stan_glm(
+  log_hours_mission ~ 1, data = log_transformed_astronauts,
   family = gaussian,
   chains = 4, iter = 5000*2, seed = 84735, refresh = 0)
+# Simulate posterior predictive model of song popularity for each artist
+set.seed(84735)
+predictions_complete <-  posterior_predict(
+  complete_pooled, newdata = log_transformed_astronauts)
+
+# Plot posterior prediction intervals for each artist (light blue)
+# with observed mean popularity levels (dark blue dots)
+#ppc_intervals(astronauts$hours_mission , yrep = predictions_complete,
+#              prob_outer = 0.80) +
+#  ggplot2::scale_x_continuous(
+#    labels = astronauts$name,
+#   breaks = 1:nrow(astronauts)) +
+#    xaxis_text(angle = 90, hjust = 1)
 ```
+
+```{r}
+mcmc_trace(complete_pooled, pars = vars(-contains(" name:")))
+mcmc_dens_overlay(complete_pooled, pars = vars(-contains(" name:")))
+mcmc_acf(complete_pooled, pars = vars(-contains(" name:")))
+```
+```{r}
+pp_check(complete_pooled)
+```
+
