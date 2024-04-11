@@ -4,13 +4,11 @@ author: "Rana Rishmawi, Khaleesi Chen, Long Truong"
 date: "2024-04-10"
 output: html_document
 ---
+
 ## Research goals 1
-There are plenty we want to look at
-1. Analyze the evolution of space missions over time, such as changes in the frequency of missions, duration (hours in mission), and the shift from military to civilian astronauts. This could offer insights into how space exploration has evolved from the Cold War era to the present day.
-To answer the research question, we would like to concentrate on the mission time total taken based on related variables. Hierarchical modeling is a method that we first think of to tackle the task.
-## Data background
-The dataset, meticulously compiled from various sources including NASA, Roscosmos, and enthusiast-driven websites, offers information of astronautical information. It encapsulates a wide array of data points ranging from the astronauts' full names, gender, birth dates, and nationalities, to their military status and details regarding their selection programs.
-It is gathered and cleaned by a TidyTuesday contributor named Tom Mock.
+
+There are plenty we want to look at 1. Analyze the evolution of space missions over time, such as changes in the frequency of missions, duration (hours in mission), and the shift from military to civilian astronauts. This could offer insights into how space exploration has evolved from the Cold War era to the present day. To answer the research question, we would like to concentrate on the mission time total taken based on related variables. Hierarchical modeling is a method that we first think of to tackle the task. \## Data background The dataset, meticulously compiled from various sources including NASA, Roscosmos, and enthusiast-driven websites, offers information of astronautical information. It encapsulates a wide array of data points ranging from the astronauts' full names, gender, birth dates, and nationalities, to their military status and details regarding their selection programs. It is gathered and cleaned by a TidyTuesday contributor named Tom Mock.
+
 ```{r, message = FALSE}
 library(bayesrules)
 library(tidyverse)
@@ -20,6 +18,13 @@ library(tidybayes)
 library(bayesplot)
 astronauts <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-07-14/astronauts.csv')
 ```
+
+## Exploration
+
+We also copy down the information of the dataset to the file Information.Rmd
+
+### Basic Stats
+
 ```{r}
 # Display information about the dataset
 dim(astronauts)  # Number of rows and columns
@@ -32,6 +37,9 @@ astronauts %>%
   count(in_orbit, sort = TRUE)
 names(astronauts)
 ```
+
+### Helpful plots
+
 ```{r}
 astronauts %>%
   mutate(
@@ -51,6 +59,11 @@ ggplot(astronauts, aes(x = total_hrs_sum, y = hours_mission)) +
        x = "Total Career Hours",
        y = "Mission Duration (hours)")
 ```
+
+## Apply model
+
+We want to first look at how mission hours varies from person to person. We do that by using the no predictor hierachical model as below:
+
 ```{r}
 library(dplyr)
 
@@ -71,6 +84,7 @@ head(log_transformed_astronauts)
 ```
 
 ```{r}
+# Complete pooled is the hierachical model name
 complete_pooled <- stan_glm(
   log_hours_mission ~ 1, data = log_transformed_astronauts,
   family = gaussian,
@@ -95,7 +109,7 @@ mcmc_trace(complete_pooled, pars = vars(-contains(" name:")))
 mcmc_dens_overlay(complete_pooled, pars = vars(-contains(" name:")))
 mcmc_acf(complete_pooled, pars = vars(-contains(" name:")))
 ```
+
 ```{r}
 pp_check(complete_pooled)
 ```
-
