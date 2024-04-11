@@ -4,7 +4,7 @@ author: "Rana Rishmawi, Khaleesi Chen, Long Truong"
 date: "2024-04-10"
 output: html_document
 ---
-## Research goals
+## Research goals 1
 There are plenty we want to look at
 1. Analyze the evolution of space missions over time, such as changes in the frequency of missions, duration (hours in mission), and the shift from military to civilian astronauts. This could offer insights into how space exploration has evolved from the Cold War era to the present day.
 To answer the research question, we would like to concentrate on the mission time total taken based on related variables. Hierarchical modeling is a method that we first think of to tackle the task.
