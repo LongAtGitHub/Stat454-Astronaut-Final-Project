@@ -40,6 +40,99 @@ astronauts %>%
   count(in_orbit, sort = TRUE)
 names(astronauts)
 ```
+### Clean
+
+```{r}
+library(dplyr)
+
+astronauts <- astronauts %>%
+  mutate(occupation = tolower(occupation))
+astronauts
+
+library(dplyr)
+
+occupation_counts <- astronauts %>%
+  count(occupation, sort = TRUE)
+
+print(occupation_counts)
+
+
+
+inorbit_counts <- astronauts %>%
+  count(in_orbit, sort = TRUE)
+
+print(inorbit_counts)
+unique_inorbit <- unique(astronauts$in_orbit)
+print(unique_inorbit)
+
+```
+```{r}
+
+
+# Convert all in_orbit values to the same title format and remove numbers behind
+astronauts <- astronauts %>%
+  mutate(in_orbit = gsub("[0-9]", "", in_orbit)) %>%
+  mutate(in_orbit = gsub("-", " ", in_orbit))
+
+
+# Remove extra spaces after "STS" in the in_orbit column
+astronauts <- astronauts %>%
+  mutate(in_orbit = gsub("STS\\s+", "STS ", in_orbit))
+
+
+# Remove all non-alphanumeric characters except spaces
+astronauts <- astronauts %>%
+  mutate(in_orbit = gsub("[^[:alnum:]\\s]", "", in_orbit))
+
+# Remove extra spaces
+astronauts <- astronauts %>%
+  mutate(in_orbit = gsub("\\s+", " ", in_orbit))
+
+
+
+
+library(dplyr)
+
+# Convert any value in the in_orbit column that includes "STS" to "STS"
+astronauts <- astronauts %>%
+  mutate(in_orbit = gsub(".*STS.*", "STS", in_orbit)) %>%
+  mutate(in_orbit = gsub(".*Soyuz.*", "Soyuz", in_orbit)) %>%
+  mutate(in_orbit = gsub(".*[Aa]pollo.*", "Apollo", in_orbit)) %>%
+  mutate(in_orbit = gsub(".*[Gg]emini.*", "Gemini", in_orbit)) %>%
+  mutate(in_orbit = gsub(".*Mir.*", "Mir", in_orbit)) %>%
+  mutate(in_orbit = gsub(".*Saluyt*", "Salyut", in_orbit)) 
+
+# Print unique values in the in_orbit column after conversion
+unique_inorbit <- unique(astronauts$in_orbit)
+print(unique_inorbit)
+
+astronauts %>%
+  count(in_orbit, sort = TRUE)
+
+```
+```{r}
+library(dplyr)
+
+# Arrange the dataset by hours_mission in ascending order and print the lowest 20 with selected columns
+lowest_20_missions <- astronauts %>%
+  arrange(hours_mission) %>%
+  tail(100)
+
+# Print the selected columns for the lowest 20 missions
+print(lowest_20_missions[, c("name", "mission_title", "hours_mission")])
+```
+
+```{r}
+top_100_hours <- astronauts %>%
+  arrange(desc(hours_mission)) %>%
+  head(100)
+
+print(top_100_hours)
+
+
+
+
+```
 
 ### Helpful plots
 
@@ -56,16 +149,72 @@ astronauts %>%
   scale_y_log10() +
   labs(x = NULL, y = "Duration of mission in hours")
 # Scatter plot of career length vs. mission hours
-ggplot(astronauts, aes(x = total_hrs_sum, y = hours_mission)) +
+ggplot(astronauts, aes(x = total_hrs_sum, y = hours_mission, color = in_orbit)) +
   geom_point() +
   labs(title = "Career Length vs. Mission Hours",
        x = "Total Career Hours",
-       y = "Mission Duration (hours)")
+       y = "Mission Duration (hours)") +
+  scale_color_manual(values = rainbow(20))
+```
+```{r}
+library(ggplot2)
+
+# Create a box plot of in_orbit vs. hours_mission
+ggplot(astronauts, aes(x = in_orbit, y = hours_mission)) +
+  geom_boxplot() +
+  labs(x = "In Orbit", y = "Hours of Mission", title = "Box Plot of In Orbit vs. Hours of Mission")
+
+```
+```{r}
+# Define a function to group in_orbit values
+group_in_orbit <- function(in_orbit) {
+  if (in_orbit %in% c("ISS", "Mir")) {
+    return("Group 1")
+  } else if (in_orbit %in% c("Salyut", "Skylab")) {
+    return("Group 2")
+  } else {
+    return("Other")
+  }
+}
+
+# Apply the function to create a new column for grouping
+astronauts <- astronauts %>%
+  mutate(in_orbit_group = sapply(in_orbit, group_in_orbit))
+
+# Check the unique values in the new in_orbit_group column
+unique(astronauts$in_orbit_group)
+
+```
+
+```{r}
+# Load necessary libraries
+library(dplyr)
+library(ggplot2)
+library(reshape2)  # For melting the data.frame
+
+# Filter out non-numerical columns
+numerical_data <- astronauts %>%
+  select(where(is.numeric))  # Selects only numeric columns
+
+# Calculate the correlation matrix
+correlation_matrix <- cor(numerical_data, use = "complete.obs")
+
+# Melt the correlation matrix for ggplot2
+melted_correlation_matrix <- melt(correlation_matrix)
+
+# Plotting the heatmap
+ggplot(melted_correlation_matrix, aes(Var1, Var2, fill = value)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0, limit = c(-1,1), name="Correlation") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title = element_blank()) +
+  labs(title = "Correlation Matrix Heatmap")
 ```
 
 ## Apply model
 
-We want to first look at how mission hours varies from person to person. We do that by using the no predictor hierarchical model as below:
+We want to first look at how mission hours varies from person to person. We do that by using the no predictor hierachical model as below:
 
 ```{r}
 library(dplyr)
@@ -85,11 +234,37 @@ log_transformed_astronauts <- astronauts %>%
 # Display the first few rows of the dataset with the log-transformed variable
 head(log_transformed_astronauts)
 ```
+```{r}
+library(dplyr)
+
+# Filter out rows with 0 hours_mission
+astronauts <- astronauts %>%
+  filter(total_hrs_sum != 0)
+
+# Display the first few rows of the filtered dataset
+head(astronauts)
+library(dplyr)
+
+# Log-transform the hours_mission variable
+log_hrsum_astronauts <- astronauts %>%
+  mutate(log_total_hrs_sum = log(hours_mission))  # Adding 1 to avoid log(0)
+
+```
+```{r}
+# Complete pooled is the hierachical model name
+complete_pooled_sum <- stan_glm(
+  log_total_hrs_sum ~ 1 + in_orbit, data = log_hrsum_astronauts,
+  family = gaussian,
+  chains = 4, iter = 5000*2, seed = 84735, refresh = 0)
+```
+```{r}
+pp_check(complete_pooled_sum)
+```
 
 ```{r}
 # Complete pooled is the hierachical model name
 complete_pooled <- stan_glm(
-  log_hours_mission ~ 1, data = log_transformed_astronauts,
+  log_hours_mission ~ in_orbit_group , data = log_transformed_astronauts,
   family = gaussian,
   chains = 4, iter = 5000*2, seed = 84735, refresh = 0)
 # Simulate posterior predictive model of song popularity for each artist
@@ -115,6 +290,52 @@ mcmc_acf(complete_pooled, pars = vars(-contains(" name:")))
 
 ```{r}
 pp_check(complete_pooled)
+```
+```{r}
+prior_poisson <- stan_glm(
+  log_hours_mission ~ in_orbit, data = log_transformed_astronauts,
+  family = gaussian,
+  prior_PD = TRUE,
+  chains = 4, iter = 5000*2, seed = 84735, refresh = 0)
+```
+```{r}
+pp_check(prior_poisson)
+```
+```{r}
+library(dplyr)
+
+# Filter out rows where in_orbit is "explosion"
+filtered_astronauts <- astronauts %>%
+  filter(in_orbit == "explosion")
+
+# Display the first few rows of the filtered dataset
+filtered_astronauts
+
+```
+```{r eval=FALSE, include=TRUE}
+# Don't run this during class
+
+model_1 <- stan_glmer(
+  log_hours_mission  ~ in_orbit + (1 | name), 
+  data = log_transformed_astronauts, 
+  family = gaussian,
+  chains = 4, iter = 5000*2, seed = 84735)
+```
+```{r eval=FALSE, include=TRUE}
+pp_check(model_1)
+```
+
+```{r}
+
+```
+```{r}
+model_8 <- stan_glm(
+  log_hours_mission ~ in_orbit + sex + year_of_mission + occupation + 1 , data = log_transformed_astronauts,
+  family = gaussian,
+  chains = 4, iter = 5000*2, seed = 84735, refresh = 0)
+```
+```{r}
+pp_check(model_8)
 ```
 
 ##Next Step
