@@ -7,9 +7,9 @@ output: html_document
 
 ## Research goals 1
 
-There are plenty we want to look at 1. Analyze the evolution of space missions over time, such as changes in the frequency of missions, duration (hours in mission), and the shift from military to civilian astronauts. This could offer insights into how space exploration has evolved from the Cold War era to the present day. To answer the research question, we would like to concentrate on the mission time total taken based on related variables. Hierarchical modeling is a method that we first think of to tackle the task. 
+There are plenty we want to look at 1. Analyze the evolution of space missions over time, such as changes in the frequency of missions, duration (hours in mission), and the shift from military to civilian astronauts. This could offer insights into how space exploration has evolved from the Cold War era to the present day. To answer the research question, we would like to concentrate on the mission time total taken based on related variables. Hierarchical modeling is a method that we first think of to tackle the task.
 
-## Data background 
+## Data background
 
 The dataset, meticulously compiled from various sources including NASA, Roscosmos, and enthusiast-driven websites, offers information of astronautical information. It encapsulates a wide array of data points ranging from the astronauts' full names, gender, birth dates, and nationalities, to their military status and details regarding their selection programs. It is gathered and cleaned by a TidyTuesday contributor named Tom Mock.
 
@@ -22,9 +22,6 @@ library(tidybayes)
 library(bayesplot)
 astronauts <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-07-14/astronauts.csv')
 ```
-
-
-
 
 ### Basic Stats
 
@@ -229,7 +226,7 @@ library(dplyr)
 
 # Log-transform the hours_mission variable
 log_transformed_astronauts <- astronauts %>%
-  mutate(log_hours_mission = log(hours_mission))  # Adding 1 to avoid log(0)
+  mutate(log_hours_mission = log(hours_mission)) 
 
 # Display the first few rows of the dataset with the log-transformed variable
 head(log_transformed_astronauts)
@@ -338,4 +335,8 @@ pp_check(model_8)
 
 ##Next Step
 
+<<<<<<< Updated upstream
 We want to do it in a journal article format, but it is just the initial thought, might change as we progress. We are thinking about running few other models like poisson or normal, and try to fix the issue with this no good pp plot. 
+=======
+We want to do it in a journal article format, but it is just the initial thought, might change as we progressed. We are thinking about running few other models like poisson or normal, and try to fix the issue with this no good pp plot.
+>>>>>>> Stashed changes
