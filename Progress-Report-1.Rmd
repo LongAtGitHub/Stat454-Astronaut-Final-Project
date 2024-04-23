@@ -40,7 +40,7 @@ astronauts %>%
   count(in_orbit, sort = TRUE)
 names(astronauts)
 ```
-### Clean
+### Cleaning the data
 
 ```{r}
 library(dplyr)
@@ -325,9 +325,7 @@ model_1 <- stan_glmer(
 pp_check(model_1)
 ```
 
-```{r}
 
-```
 ```{r}
 model_8 <- stan_glm(
   log_hours_mission ~ in_orbit + sex + year_of_mission + occupation + 1 , data = log_transformed_astronauts,
@@ -340,4 +338,4 @@ pp_check(model_8)
 
 ##Next Step
 
-We want to do it in a journal article format, but it is just the initial thought, might change as we progressed. We are thinking about running few other models like poisson or normal, and try to fix the issue with this no good pp plot. 
+We want to do it in a journal article format, but it is just the initial thought, might change as we progress. We are thinking about running few other models like poisson or normal, and try to fix the issue with this no good pp plot. 
