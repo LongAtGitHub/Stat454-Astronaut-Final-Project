@@ -1,0 +1,72 @@
+# Wrangling 
+
+## Mini Goal
+A model having Name, Sex, Mission Year, Occupation, mission title, program selection (or in-orbit), hours_mission
+
+Use a Hierarchical Model with "Selection" as a Group Level?
+Account for Non-Independence: Astronauts selected by the same program might share similar training, backgrounds, or selection criteria that influence other variables (e.g., performance, mission roles, outcomes). A hierarchical model can account for this non-independence within groups.
+
+## Occupation cleaning
+
+## Program selection
+
+```{r}
+astronauts_df <- astronauts %>%
+  select(
+    name, mission_title, hours_mission,
+    military_civilian, occupation, year_of_mission, in_orbit, sex
+  ) %>%
+  mutate(
+    in_orbit = case_when(
+      str_detect(in_orbit, "(?i)^salyut") ~ "Salyut",
+      str_detect(in_orbit, "(?i)^apollo") ~ "Apollo",
+      str_detect(in_orbit, "(?i)^sts") ~ "STS",
+      str_detect(in_orbit, "(?i)^soyuz") ~ "Soyuz",
+      str_detect(in_orbit, "(?i)^shenzhou") ~ "Shenzhou",
+      str_detect(in_orbit, "(?i)^gemini") ~ "Gemini",
+      TRUE ~ in_orbit
+    ),
+    occupation = str_to_lower(occupation)
+  ) %>%
+  filter(hours_mission > 0) %>%
+  mutate(log_hours_mission = log(hours_mission)) %>%
+  na.omit()
+
+in_orbit_cate <- astronauts_df %>% count(in_orbit, sort= TRUE) %>% head(8)
+
+astronauts_df <- astronauts_df %>% filter(
+  in_orbit %in% in_orbit_cate$in_orbit
+)
+  
+
+```
+
+```{r}
+astronauts_df
+```
+
+```{r}
+hiera <- stan_glmer(
+  log_hours_mission ~ (1 | in_orbit) + `sex` + occupation, data = astronauts_df,
+  family = gaussian,
+  chains = 4, iter = 1000*2, seed = 84735, refresh = 0)
+# Simulate posterior predictive model of song popularity for each artist
+set.seed(84735)
+predictions_complete <-  posterior_predict(
+  hiera, newdata = astronauts_df)
+```
+
+
+```{r}
+pp_check(hiera)
+```
+
+
+```{r}
+ggplot(astronauts_df, aes(x = in_orbit, y = hours_mission)) +
+  geom_boxplot() +
+  labs(title = "Career Length vs. Mission Hours",
+       x = "Total Career Hours",
+       y = "Mission Duration (hours)")
+```
+

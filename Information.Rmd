@@ -43,7 +43,7 @@ astronauts <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience
 # `astronauts.csv`
 
 | variable                 | class     | description                                              |
-|:---------------|:--------------|-----------------------------------------|
+|:----------------|:------------------|---------------------------------------|
 | id                       | double    | ID                                                       |
 | number                   | double    | Number                                                   |
 | nationwide_number        | double    | Number within country                                    |
