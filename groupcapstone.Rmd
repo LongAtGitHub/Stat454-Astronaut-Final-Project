@@ -1,5 +1,6 @@
 ---
-title: "clean version"
+title: "STAT 454 Project Progress Report 2"
+authors: "Khaleesi Chen, Long Truong, Rana Rishmawi"
 output: html_document
 date: "2024-04-23"
 ---
@@ -8,6 +9,7 @@ date: "2024-04-23"
 knitr::opts_chunk$set(echo = TRUE)
 library(bayesrules)
 library(tidyverse)
+library(dplyr)
 library(rstanarm)
 library(broom.mixed)
 library(tidybayes)
@@ -15,11 +17,13 @@ library(bayesplot)
 astronauts <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-07-14/astronauts.csv')
 ```
 
-## R Markdown
+## Research goals
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+Analyze the evolution of space missions over time, such as changes in the frequency of missions, duration (hours in mission), and the shift from military to civilian astronauts. This could offer insights into how space exploration has evolved from the Cold War era to the present day. To answer the research question, we would like to concentrate on the mission time total taken based on related variables. Hierarchical modeling is a method that we first think of to tackle the task.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+## Data background
+
+The dataset, meticulously compiled from various sources including NASA, Roscosmos, and enthusiast-driven websites, offers information of astronautical information. It encapsulates a wide array of data points ranging from the astronauts' full names, gender, birth dates, and nationalities, to their military status and details regarding their selection programs. It is gathered and cleaned by a TidyTuesday contributor named Tom Mock.
 
 ```{r cars}
 # Display information about the dataset
@@ -31,22 +35,14 @@ str(astronauts)  # Structure of the dataset
 
 ## Clean
 
-You can also embed plots, for example:
-
 ```{r pressure, echo=FALSE}
-library(dplyr)
-
 astronauts <- astronauts %>%
   mutate(occupation = tolower(occupation))
-astronauts
-
-library(dplyr)
 
 occupation_counts <- astronauts %>%
   count(occupation, sort = TRUE)
 
 print(occupation_counts)
-
 
 
 inorbit_counts <- astronauts %>%
@@ -75,9 +71,6 @@ astronauts <- astronauts %>%
   mutate(in_orbit = gsub("\\s+", " ", in_orbit))
 
 
-
-
-library(dplyr)
 
 # Convert any value in the in_orbit column that includes "STS" to "STS"
 astronauts <- astronauts %>%
@@ -113,15 +106,12 @@ astronauts <- astronauts %>%
 unique(astronauts$in_orbit_group)
 ```
 ```{r}
-library(dplyr)
-
 # Filter out rows with 0 hours_mission
 astronauts <- astronauts %>%
   filter(hours_mission != 0)
 
 # Display the first few rows of the filtered dataset
 head(astronauts)
-library(dplyr)
 
 # Log-transform the hours_mission variable
 log_transformed_astronauts <- astronauts %>%
@@ -136,11 +126,15 @@ model_h <- stan_glm(
   family = gaussian,
   chains = 4, iter = 5000*2, seed = 84735, refresh = 0)
 ```
+
 ```{r}
 pp_check(model_h)
 ```
+
 ```{r}
 tidy(model_h, conf.int = TRUE, conf.level = 0.8)
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+the hierarchical model from the previous report (report 1) is not good enough so we split the data into 3 groups and we have a hierarchical model for them,the first two groups (group 1 and group 2) last group seems to do well and this is because of the outliers which messes things up. so going forward we will focus on group 3
