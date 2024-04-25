@@ -6,7 +6,6 @@ date: "2024-04-23"
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
 library(bayesrules)
 library(tidyverse)
 library(dplyr)
@@ -17,23 +16,21 @@ library(bayesplot)
 astronauts <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-07-14/astronauts.csv')
 ```
 
-## Research goals
+## Research Goals
 
 Analyze the evolution of space missions over time, such as changes in the frequency of missions, duration (hours in mission), and the shift from military to civilian astronauts. This could offer insights into how space exploration has evolved from the Cold War era to the present day. To answer the research question, we would like to concentrate on the mission time total taken based on related variables. Hierarchical modeling is a method that we first think of to tackle the task.
 
-## Data background
+## Data Background
 
 The dataset, meticulously compiled from various sources including NASA, Roscosmos, and enthusiast-driven websites, offers information of astronautical information. It encapsulates a wide array of data points ranging from the astronauts' full names, gender, birth dates, and nationalities, to their military status and details regarding their selection programs. It is gathered and cleaned by a TidyTuesday contributor named Tom Mock.
 
+### Display information about the dataset
 ```{r cars}
-# Display information about the dataset
 dim(astronauts)  # Number of rows and columns
-names(astronauts)  # Column names
-head(astronauts)  # First few rows
-str(astronauts)  # Structure of the dataset
+names(astronauts)  # First few rows
 ```
 
-## Clean
+## Cleaning the Data
 
 ```{r pressure, echo=FALSE}
 astronauts <- astronauts %>%
@@ -42,15 +39,11 @@ astronauts <- astronauts %>%
 occupation_counts <- astronauts %>%
   count(occupation, sort = TRUE)
 
-print(occupation_counts)
-
 
 inorbit_counts <- astronauts %>%
   count(in_orbit, sort = TRUE)
 
-print(inorbit_counts)
 unique_inorbit <- unique(astronauts$in_orbit)
-print(unique_inorbit)
 # Convert all in_orbit values to the same title format and remove numbers behind
 astronauts <- astronauts %>%
   mutate(in_orbit = gsub("[0-9]", "", in_orbit)) %>%
@@ -81,9 +74,6 @@ astronauts <- astronauts %>%
   mutate(in_orbit = gsub(".*Mir.*", "Mir", in_orbit)) %>%
   mutate(in_orbit = gsub(".*Saluyt*", "Salyut", in_orbit)) 
 
-# Print unique values in the in_orbit column after conversion
-unique_inorbit <- unique(astronauts$in_orbit)
-print(unique_inorbit)
 
 astronauts %>%
   count(in_orbit, sort = TRUE)
@@ -110,16 +100,12 @@ unique(astronauts$in_orbit_group)
 astronauts <- astronauts %>%
   filter(hours_mission != 0)
 
-# Display the first few rows of the filtered dataset
-head(astronauts)
-
 # Log-transform the hours_mission variable
 log_transformed_astronauts <- astronauts %>%
   mutate(log_hours_mission = log(hours_mission))  # Adding 1 to avoid log(0)
 
-# Display the first few rows of the dataset with the log-transformed variable
-head(log_transformed_astronauts)
 ```
+
 ```{r}
 model_h <- stan_glm(
   log_hours_mission ~ 1 + in_orbit_group, data = log_transformed_astronauts,
@@ -135,6 +121,51 @@ pp_check(model_h)
 tidy(model_h, conf.int = TRUE, conf.level = 0.8)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+## Methodology
+We are using hierarchical modeling to make predictions on the the mission hours based on multiple predictors, such as the orbit group and the occupation of each astronaut. 
+The hierarchical model from the previous report (report 1) is not good enough so we split the data into 3 groups (that corresponds with different types of orbits) and we have a hierarchical model for them. The first two groups (group 1 and group 2) did not provide good information, and the model seemed more wrong. The last group, however, seems to be going well and this is because of the outliers. Therefore, going forward we will focus on group 3. 
 
-the hierarchical model from the previous report (report 1) is not good enough so we split the data into 3 groups and we have a hierarchical model for them,the first two groups (group 1 and group 2) last group seems to do well and this is because of the outliers which messes things up. so going forward we will focus on group 3
+## Bibliography
+
+https://juliasilge.com/blog/astronaut-missions-bagging/
+
+```{r}
+complete_pooled <- stan_glmer(
+ log_hours_mission ~ (1|in_orbit), data = log_transformed_astronauts,
+  family = gaussian,
+  chains = 4, iter = 1000*2, seed = 84735, refresh = 0)
+
+
+astronaut_means <- log_transformed_astronauts %>%
+  group_by(in_orbit) %>%
+  summarize(count = n(), mission = mean(log_hours_mission))
+set.seed(84735)
+
+predictions_complete <-  posterior_predict(
+  complete_pooled, newdata = astronaut_means)
+
+ppc_intervals(astronaut_means$mission, yrep = predictions_complete,
+              prob_outer = 0.80) +
+  ggplot2::scale_x_continuous(
+    labels = astronaut_means$in_orbit,
+    breaks = 1:nrow(astronaut_means)) +
+    xaxis_text(angle = 90, hjust = 1)
+
+pp_check(complete_pooled)
+
+set.seed(84735)
+prediction_summary(model = complete_pooled, data =log_transformed_astronauts)
+```
+over estimate the observations (between 5 - 7.5) and under estimate the peaks
+```{r}
+set.seed(84735)
+predictions_complete_2 <- posterior_predict(
+  complete_pooled,
+  newdata = data.frame(in_orbit = c("Random", "STS")))
+
+# Plot the posterior predictive models
+mcmc_areas(predictions_complete_2, prob = 0.8) +
+  xlab("hours") +
+  ggplot2::scale_y_discrete(labels = c("Random", "STS"))
+
+```

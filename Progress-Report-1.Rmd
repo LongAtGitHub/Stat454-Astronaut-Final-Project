@@ -335,8 +335,7 @@ pp_check(model_8)
 
 ##Next Step
 
-<<<<<<< Updated upstream
+
 We want to do it in a journal article format, but it is just the initial thought, might change as we progress. We are thinking about running few other models like poisson or normal, and try to fix the issue with this no good pp plot. 
-=======
-We want to do it in a journal article format, but it is just the initial thought, might change as we progressed. We are thinking about running few other models like poisson or normal, and try to fix the issue with this no good pp plot.
->>>>>>> Stashed changes
+
+
