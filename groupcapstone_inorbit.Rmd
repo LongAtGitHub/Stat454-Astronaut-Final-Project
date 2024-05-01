@@ -1,0 +1,248 @@
+---
+title: "clean version"
+output: html_document
+date: "2024-04-23"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(bayesrules)
+library(tidyverse)
+library(rstanarm)
+library(broom.mixed)
+library(tidybayes)
+library(bayesplot)
+astronauts <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-07-14/astronauts.csv')
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+# Display information about the dataset
+dim(astronauts)  # Number of rows and columns
+names(astronauts)  # Column names
+head(astronauts)  # First few rows
+str(astronauts)  # Structure of the dataset
+```
+
+## Clean
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+library(dplyr)
+
+astronauts <- astronauts %>%
+  mutate(occupation = tolower(occupation))
+astronauts
+
+library(dplyr)
+
+occupation_counts <- astronauts %>%
+  count(occupation, sort = TRUE)
+
+print(occupation_counts)
+
+
+
+inorbit_counts <- astronauts %>%
+  count(in_orbit, sort = TRUE)
+
+print(inorbit_counts)
+unique_inorbit <- unique(astronauts$in_orbit)
+print(unique_inorbit)
+# Convert all in_orbit values to the same title format and remove numbers behind
+astronauts <- astronauts %>%
+  mutate(in_orbit = gsub("[0-9]", "", in_orbit)) %>%
+  mutate(in_orbit = gsub("-", " ", in_orbit))
+
+
+# Remove extra spaces after "STS" in the in_orbit column
+astronauts <- astronauts %>%
+  mutate(in_orbit = gsub("STS\\s+", "STS ", in_orbit))
+
+
+# Remove all non-alphanumeric characters except spaces
+astronauts <- astronauts %>%
+  mutate(in_orbit = gsub("[^[:alnum:]\\s]", "", in_orbit))
+
+# Remove extra spaces
+astronauts <- astronauts %>%
+  mutate(in_orbit = gsub("\\s+", " ", in_orbit))
+
+
+
+
+library(dplyr)
+
+# Convert any value in the in_orbit column that includes "STS" to "STS"
+astronauts <- astronauts %>%
+  mutate(in_orbit = gsub(".*STS.*", "STS", in_orbit)) %>%
+  mutate(in_orbit = gsub(".*Soyuz.*", "Soyuz", in_orbit)) %>%
+  mutate(in_orbit = gsub(".*[Aa]pollo.*", "Apollo", in_orbit)) %>%
+  mutate(in_orbit = gsub(".*[Gg]emini.*", "Gemini", in_orbit)) %>%
+  mutate(in_orbit = gsub(".*Mir.*", "Mir", in_orbit)) %>%
+  mutate(in_orbit = gsub(".*Saluyt*", "Salyut", in_orbit)) 
+
+# Print unique values in the in_orbit column after conversion
+unique_inorbit <- unique(astronauts$in_orbit)
+print(unique_inorbit)
+
+astronauts %>%
+  count(in_orbit, sort = TRUE)
+# Define a function to group in_orbit values
+group_in_orbit <- function(in_orbit) {
+  if (in_orbit %in% c("ISS", "Mir")) {
+    return("Group 1")
+  } else if (in_orbit %in% c("Salyut", "Skylab")) {
+    return("Group 2")
+  } else {
+    return("Group 3")
+  }
+}
+
+# Apply the function to create a new column for grouping
+astronauts <- astronauts %>%
+  mutate(in_orbit_group = sapply(in_orbit, group_in_orbit))
+
+# Check the unique values in the new in_orbit_group column
+unique(astronauts$in_orbit_group)
+```
+```{r}
+library(dplyr)
+
+# Filter out rows with 0 hours_mission
+astronauts <- astronauts %>%
+  filter(hours_mission != 0)
+
+# Display the first few rows of the filtered dataset
+head(astronauts)
+library(dplyr)
+
+# Log-transform the hours_mission variable
+log_transformed_astronauts <- astronauts %>%
+  mutate(log_hours_mission = log(hours_mission))  # Adding 1 to avoid log(0)
+
+# Display the first few rows of the dataset with the log-transformed variable
+head(log_transformed_astronauts)
+```
+```{r}
+model_h <- stan_glm(
+  log_hours_mission ~ 1 + in_orbit_group, data = log_transformed_astronauts,
+  family = gaussian,
+  chains = 4, iter = 5000*2, seed = 84735, refresh = 0)
+```
+```{r}
+pp_check(model_h)
+```
+```{r}
+tidy(model_h, conf.int = TRUE, conf.level = 0.8)
+saveRDS(model_h, "model_h")
+```
+## ISS
+```{r}
+# Subset the dataset to include only rows where in_orbit is "ISS"
+ISS_data <- log_transformed_astronauts[log_transformed_astronauts$in_orbit == "ISS", ]
+
+# View the first few rows of the subsetted dataset
+head(ISS_data)
+
+```
+```{r}
+model_ISS <- stan_glm(
+  log_hours_mission ~ 1 + field21 + eva_hrs_mission + mission_number, data = ISS_data,
+  family = gaussian,
+  chains = 4, iter = 5000*2, seed = 84735, refresh = 0)
+```
+```{r}
+pp_check(model_ISS)
+saveRDS(model_ISS, "model_ISS")
+```
+## Mir
+```{r}
+Mir_data <- log_transformed_astronauts[log_transformed_astronauts$in_orbit == "Mir", ]
+
+# View the first few rows of the subsetted dataset
+head(Mir_data)
+```
+```{r}
+model_Mir <- stan_glm(
+  log_hours_mission ~ 1 + field21 + eva_hrs_mission + mission_number + occupation, data = Mir_data,
+  family = gaussian,
+  chains = 4, iter = 5000*2, seed = 84735, refresh = 0)
+```
+```{r}
+pp_check(model_Mir)
+saveRDS(model_Mir, "model_Mir")
+```
+## Salyut
+```{r}
+Salyut_data <- log_transformed_astronauts[log_transformed_astronauts$in_orbit == "Salyut", ]
+
+# View the first few rows of the subsetted dataset
+head(Salyut_data)
+
+model_Salyut <- stan_glm(
+  log_hours_mission ~ 1 + field21 + eva_hrs_mission + mission_number + occupation, data =Salyut_data,
+  family = gaussian,
+  chains = 4, iter = 5000*2, seed = 84735, refresh = 0)
+pp_check(model_Salyut)
+saveRDS(model_Salyut, "model_Salyut")
+```
+## Skylab
+```{r}
+Skylab_data <- log_transformed_astronauts[log_transformed_astronauts$in_orbit == "Skylab", ]
+
+# View the first few rows of the subsetted dataset
+head(Skylab_data)
+
+model_Skylab <- stan_glm(
+  log_hours_mission ~ 1 + field21 + eva_hrs_mission + mission_number + total_hrs_sum, data =Skylab_data,
+  family = gaussian,
+  chains = 4, iter = 5000*2, seed = 84735, refresh = 0)
+pp_check(model_Skylab)
+saveRDS(model_Skylab, "model_Skylab")
+```
+## Soyuz
+```{r}
+Soyuz_data <- log_transformed_astronauts[log_transformed_astronauts$in_orbit == "Soyuz", ]
+
+# View the first few rows of the subsetted dataset
+head(Soyuz_data)
+
+model_Soyuz <- stan_glm(
+  log_hours_mission ~ sex + year_of_mission + occupation + 1, data =Soyuz_data,
+  family = gaussian,
+  chains = 4, iter = 5000*2, seed = 84735, refresh = 0)
+pp_check(model_Soyuz)
+saveRDS(model_Soyuz, "model_Soyuz")
+```
+## STS
+```{r}
+STS_data <- log_transformed_astronauts[log_transformed_astronauts$in_orbit == "STS", ]
+
+# View the first few rows of the subsetted dataset
+head(STS_data)
+
+model_STS <- stan_glm(
+  log_hours_mission ~ sex + year_of_mission + occupation + 1 + field21 + total_number_of_missions, data =STS_data,
+  family = gaussian,
+  chains = 4, iter = 5000*2, seed = 84735, refresh = 0)
+pp_check(model_STS)
+
+```
+```{r}
+tidy(model_STS, conf.int = TRUE, conf.level = 0.8)
+saveRDS(model_STS, "model_STS")
+```
+```{r}
+
+set.seed(84735)
+prediction_summary(model = model_STS, data =STS_data)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
