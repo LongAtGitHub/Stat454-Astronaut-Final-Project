@@ -95,6 +95,7 @@ astronauts <- astronauts %>%
 # Check the unique values in the new in_orbit_group column
 unique(astronauts$in_orbit_group)
 ```
+
 ```{r}
 # Filter out rows with 0 hours_mission
 astronauts <- astronauts %>%
@@ -130,10 +131,17 @@ The hierarchical model from the previous report (report 1) is not good enough so
 https://juliasilge.com/blog/astronaut-missions-bagging/
 
 ```{r}
-complete_pooled <- stan_glmer(
- log_hours_mission ~ (1|in_orbit), data = log_transformed_astronauts,
-  family = gaussian,
-  chains = 4, iter = 1000*2, seed = 84735, refresh = 0)
+
+log_transformed_astronauts$in_orbit <- as.factor(log_transformed_astronauts$in_orbit)
+
+# complete_pooled <- stan_glmer(
+#  log_hours_mission ~ (1 | in_orbit), data = log_transformed_astronauts,
+#   family = gaussian,
+#   chains = 4, iter = 1000*2, seed = 84735, refresh = 0)
+
+saveRDS(complete_pooled, "models/hierachical.rds")
+
+complete_pooled <- readRDS("models/hierachical.rds")
 
 
 astronaut_means <- log_transformed_astronauts %>%
@@ -169,3 +177,10 @@ mcmc_areas(predictions_complete_2, prob = 0.8) +
   ggplot2::scale_y_discrete(labels = c("Random", "STS"))
 
 ```
+```{r}
+predict_cv <- prediction_summary_cv(model = complete_pooled, group = "in_orbit", data = log_transformed_astronauts, k = 2)
+
+saveRDS(complete_pooled, "models/hierachical.rds")
+log_transformed_astronauts %>% head()
+```
+
