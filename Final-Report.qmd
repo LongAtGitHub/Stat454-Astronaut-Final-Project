@@ -109,8 +109,6 @@ log_transformed_astronauts$year_of_selection <- as.factor(log_transformed_astron
 
 ## Model  1
 
-
-
 ### Constructing
 ```{r}
 # hiera_1 <- stan_glmer(
@@ -146,12 +144,7 @@ set.seed(84735)
 prediction_summary(model = hiera_1, data =log_transformed_astronauts)
 ```
 
-```{r}
-# predict_cv <- prediction_summary_cv(model = complete_pooled, group = "in_orbit", data = log_transformed_astronauts, k = 5)
 
-predict_cv <- saveRDS(complete_pooled, "other_states/predict_cv.rds")
-
-```
 
 ### You vs other astronauts
 ```{r}
@@ -167,13 +160,7 @@ mcmc_areas(predictions_complete_2, prob = 0.8) +
 
 ```
 
-```{r}
-# predict_cv <- prediction_summary_cv(model = complete_pooled, group = "in_orbit", data = log_transformed_astronauts, k = 5)
-# saveRDS(complete_pooled, "other_states/predict_cv.rds")
 
-predict_cv <- readRDS("other_states/predict_cv.rds")
-
-```
 
 ## Model 2 
 
@@ -199,6 +186,13 @@ hiera_2 <- readRDS("models/new_hierachical.rds")
 ### Evaluation
 ```{r}
 pp_check(hiera_2)
+```
+```{r}
+# prediction summary
+# hiera_predict_2 <- prediction_summary(model = hiera_2, data=log_transformed_astronauts)
+# 
+# saveRDS(hiera_predict_2, "hierachical_model_2_predict_cv")
+hiera_predict_2
 ```
 
 
