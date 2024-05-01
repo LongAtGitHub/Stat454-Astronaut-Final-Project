@@ -94,9 +94,9 @@ astronauts <- astronauts %>%
 
 # Check the unique values in the new in_orbit_group column
 unique(astronauts$in_orbit_group)
-```
 
-```{r}
+
+
 # Filter out rows with 0 hours_mission
 astronauts <- astronauts %>%
   filter(hours_mission != 0)
@@ -105,22 +105,23 @@ astronauts <- astronauts %>%
 log_transformed_astronauts <- astronauts %>%
   mutate(log_hours_mission = log(hours_mission))  # Adding 1 to avoid log(0)
 
-```
+# Factorize the column
+log_transformed_astronauts$in_orbit <- as.factor(log_transformed_astronauts$in_orbit)
+log_transformed_astronauts$nationality <- as.factor(log_transformed_astronauts$nationality)
+log_transformed_astronauts$sex <- as.factor(log_transformed_astronauts$sex)
+log_transformed_astronauts$occupation <- as.factor(log_transformed_astronauts$occupation)
+log_transformed_astronauts$year_of_selection <- as.factor(log_transformed_astronauts$year_of_selection)
 
-```{r}
-model_h <- stan_glm(
-  log_hours_mission ~ 1 + in_orbit_group, data = log_transformed_astronauts,
-  family = gaussian,
-  chains = 4, iter = 5000*2, seed = 84735, refresh = 0)
-```
 
-```{r}
-pp_check(model_h)
-```
 
-```{r}
-tidy(model_h, conf.int = TRUE, conf.level = 0.8)
+log_transformed_astronauts %>% 
+  filter(field21==0) %>% head()
 ```
+field21 probably counts how many times astronauts exited their spacecraft to perform tasks outside during a particular mission. 
+
+
+
+
 
 ## Methodology
 We are using hierarchical modeling to make predictions on the the mission hours based on multiple predictors, such as the orbit group and the occupation of each astronaut. 
@@ -130,19 +131,33 @@ The hierarchical model from the previous report (report 1) is not good enough so
 
 https://juliasilge.com/blog/astronaut-missions-bagging/
 
+## 1 predictor group
 ```{r}
+hiera_1 <- readRDS()
+```
 
-log_transformed_astronauts$in_orbit <- as.factor(log_transformed_astronauts$in_orbit)
 
-# complete_pooled <- stan_glmer(
-#  log_hours_mission ~ (1 | in_orbit), data = log_transformed_astronauts,
+## 2 predictor groupings
+
+```{r}
+log_transformed_astronauts %>% head()
+
+# hiera <- stan_glmer(
+#  log_hours_mission ~ 
+#    (1 | in_orbit) + 
+#     occupation + 
+#    total_number_of_missions +
+#    year_of_selection +
+#    field21
+#  
+#  , data = log_transformed_astronauts,
 #   family = gaussian,
 #   chains = 4, iter = 1000*2, seed = 84735, refresh = 0)
 
-saveRDS(complete_pooled, "models/hierachical.rds")
+saveRDS(hiera, "models/new_hierachical.rds")
 
-complete_pooled <- readRDS("models/hierachical.rds")
-
+complete_pooled<- readRDS("models/new_hierachical.rds")
+pp_check(hiera)
 
 astronaut_means <- log_transformed_astronauts %>%
   group_by(in_orbit) %>%
@@ -177,10 +192,13 @@ mcmc_areas(predictions_complete_2, prob = 0.8) +
   ggplot2::scale_y_discrete(labels = c("Random", "STS"))
 
 ```
+
 ```{r}
 # predict_cv <- prediction_summary_cv(model = complete_pooled, group = "in_orbit", data = log_transformed_astronauts, k = 5)
 
 predict_cv
 saveRDS(complete_pooled, "other_states/predict_cv.rds")
+
+
 ```
 
