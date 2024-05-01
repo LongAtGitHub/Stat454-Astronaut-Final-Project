@@ -178,9 +178,9 @@ mcmc_areas(predictions_complete_2, prob = 0.8) +
 
 ```
 ```{r}
-predict_cv <- prediction_summary_cv(model = complete_pooled, group = "in_orbit", data = log_transformed_astronauts, k = 2)
+# predict_cv <- prediction_summary_cv(model = complete_pooled, group = "in_orbit", data = log_transformed_astronauts, k = 5)
 
-saveRDS(complete_pooled, "models/hierachical.rds")
-log_transformed_astronauts %>% head()
+predict_cv
+saveRDS(complete_pooled, "other_states/predict_cv.rds")
 ```
 
