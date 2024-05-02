@@ -112,10 +112,6 @@ log_transformed_astronauts$sex <- as.factor(log_transformed_astronauts$sex)
 log_transformed_astronauts$occupation <- as.factor(log_transformed_astronauts$occupation)
 log_transformed_astronauts$year_of_selection <- as.factor(log_transformed_astronauts$year_of_selection)
 
-
-
-log_transformed_astronauts %>% 
-  filter(field21==0) %>% head()
 ```
 field21 probably counts how many times astronauts exited their spacecraft to perform tasks outside during a particular mission. 
 

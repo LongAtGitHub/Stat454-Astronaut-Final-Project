@@ -142,22 +142,37 @@ set.seed(84735)
 predictions_complete <-  posterior_predict(
   hiera_1, newdata = astronaut_means)
 
+set.seed(84735)
+```
+
+
+### posterior predictive check
+
+```{r}
 ppc_intervals(astronaut_means$mission, yrep = predictions_complete,
               prob_outer = 0.80) +
   ggplot2::scale_x_continuous(
     labels = astronaut_means$in_orbit,
     breaks = 1:nrow(astronaut_means)) +
     xaxis_text(angle = 90, hjust = 1)
-
-pp_check(hiera_1)
-
-set.seed(84735)
-prediction_summary(model = hiera_1, data =log_transformed_astronauts)
 ```
 
+The hierarchical predictive models are centered very near at the observed sample means.
 
+```{r}
+pp_check(hiera_1)
+```
 
-### You vs other astronauts
+Dual Peaks: Both the observed data (Y) and the replicated data (Y_rep) exhibit a bimodal distribution with two prominent peaks. This suggests that the data might be representing two distinct groups or conditions within the dataset.
+Alignment of Peaks: The peaks of the replicated data generally align with those of the observed data, which is a positive indication that the model captures the central tendencies of the data correctly for both groups
+
+### MAE score
+```{r}
+prediction_summary(model = hiera_1, data =log_transformed_astronauts)
+```
+On average, the log (of mission hours) deviate from the actual by 0.249.
+
+### Your mission time vs STS astronauts'
 ```{r}
 set.seed(84735)
 predictions_complete_2 <- posterior_predict(
@@ -170,7 +185,7 @@ mcmc_areas(predictions_complete_2, prob = 0.8) +
   ggplot2::scale_y_discrete(labels = c("You", "STS"))
 
 ```
-
+The plot of your mission time has higher uncertainty since we do not have enough data on you to make good prediction.
 
 
 ## Model 2 
@@ -198,6 +213,7 @@ hiera_2 <- readRDS("models/new_hierachical.rds")
 ```{r}
 pp_check(hiera_2)
 ```
+This plot shows identical shape to the posterior predictive check above although this model is more complicated than the one above. 
 
 ```{r}
 # prediction summary
@@ -207,5 +223,6 @@ pp_check(hiera_2)
 hiera_predict_2 <- readRDS("other_states/hierachical_model_2_predict")
 hiera_predict_2
 ```
+On average, the log (of mission hours) deviate from the actual by 0.388. This metric is higher than model 1 above. 
 
 
