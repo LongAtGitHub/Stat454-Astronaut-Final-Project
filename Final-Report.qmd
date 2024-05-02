@@ -121,6 +121,17 @@ log_transformed_astronauts$year_of_selection <- as.factor(log_transformed_astron
 hiera_1 <- readRDS("models/hierachical.rds")
 ```
 
+**Layer 1:** Model of how individual observations vary *within* each in-orbit space craft group \( j \)
+\[ Y_{ij} | \mu_j, \sigma \sim N(\mu_j, \sigma_y^2) \]
+
+**Layer 2:** Model of how means \( \mu_j \) vary *between* groups
+\[ \mu_j | \mu, \sigma_{\mu} \sim N(\mu, \sigma_{\mu}^2) \]
+
+**Layer 3:** Priors on global parameters
+\[ \mu \sim N(m, s^2) \]
+\[ \sigma_y \sim \text{Exp}(l_y) \]
+\[ \sigma_{\mu} \sim \text{Exp}(l_{\mu}) \]
+
 ### Evaluation
 ```{r}
 astronaut_means <- log_transformed_astronauts %>%
@@ -187,11 +198,13 @@ hiera_2 <- readRDS("models/new_hierachical.rds")
 ```{r}
 pp_check(hiera_2)
 ```
+
 ```{r}
 # prediction summary
 # hiera_predict_2 <- prediction_summary(model = hiera_2, data=log_transformed_astronauts)
 # 
 # saveRDS(hiera_predict_2, "hierachical_model_2_predict_cv")
+hiera_predict_2 <- readRDS("other_states/hierachical_model_2_predict")
 hiera_predict_2
 ```
 
