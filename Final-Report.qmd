@@ -225,4 +225,23 @@ hiera_predict_2
 ```
 On average, the log (of mission hours) deviate from the actual by 0.388. This metric is higher than model 1 above. 
 
+## Conclusion
+
+Throughout this project, our primary goal was to analyze the evolution of space mission hours over time, with a specific focus on mission frequency, occupation and year of astronaut selection.By utilizing the data set, we were able to explore a variety of factors influencing the mission times of astronauts across different orbital missions.
+
+### Key Findings:
+
+- **Model Performance:** The first hierarchical model provided a good fit to the data, as evidenced by the posterior predictive checks. This model, which considered only the `in_orbit` factor as a predictor, had an average mean absolute error (MAE) of 0.249, suggesting that it was reasonably effective in predicting the hours of missions.
+
+- **Comparison of Models:** Despite the simplicity of the first model, it performed better than the second, more complex model, which included additional predictors - occupation, number of missions, and year of selection. The second model had a slightly higher MAE of 0.388, indicating that adding more variables did not necessarily improve the predictive accuracy for our specific dataset.
+
+
+### Implications:
+
+The findings suggest that while the hierarchical modeling approach is suitable for handling the data of space missions, the performance of the models varied. The first model, though simpler, performed good quality of perdiction as evidenced by the reasonable mean absolute error (MAE) and alignment in the posterior predictive checks. However, it did not creat a perfect fit, indicating room for improvement in capturing the variability within the data.
+
+The second, more complex model did not improve on the predictive accuracy of the first, despite including additional predictors. The potential issue about overfitting and model selection based on the predictive relevance of variables rather than merely expanding complexity were detected.
+
+These results highlight the challenges in statistical modeling of astronautical data, and the complexity of the dataset itself. Overfitting remains a critical concern, especially when the inclusion of multiple predictors does not necessarily lead to better predictions. Future research could take place on exploring alternative modeling or incorporating different sets of predictors that might better account for the variations observed in the data. Additionally, expanding the dataset to include more recent and diverse missions could help in developing more suitable models.
+
 
