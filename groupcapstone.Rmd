@@ -2,6 +2,7 @@
 title: "STAT 454 Project Progress Report 2"
 authors: "Khaleesi Chen, Long Truong, Rana Rishmawi"
 output: html_document
+  code_folding: hide
 date: "2024-04-23"
 ---
 
@@ -25,14 +26,14 @@ Analyze the evolution of space missions over time, such as changes in the freque
 The dataset, meticulously compiled from various sources including NASA, Roscosmos, and enthusiast-driven websites, offers information of astronautical information. It encapsulates a wide array of data points ranging from the astronauts' full names, gender, birth dates, and nationalities, to their military status and details regarding their selection programs. It is gathered and cleaned by a TidyTuesday contributor named Tom Mock.
 
 ### Display information about the dataset
-```{r cars}
+```{r}
 dim(astronauts)  # Number of rows and columns
 names(astronauts)  # First few rows
 ```
 
 ## Cleaning the Data
 
-```{r pressure, echo=FALSE}
+```{r}
 astronauts <- astronauts %>%
   mutate(occupation = tolower(occupation))
 

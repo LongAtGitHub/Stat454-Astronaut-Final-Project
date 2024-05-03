@@ -1,7 +1,9 @@
 ---
 title: "STAT 454 Project Progress Report"
 authors: "Khaleesi Chen, Long Truong, Rana Rishmawi"
-output: html_document
+output:
+  html_document:
+    code_folding: show
 date: "2024-04-23"
 ---
 
@@ -30,22 +32,24 @@ astronauts <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience
 
 ## Research Goals
 
-Analyze the evolution of space missions over time, such as changes in the frequency of missions, duration (hours in mission), and the shift from military to civilian astronauts. This could offer insights into how space exploration has evolved from the Cold War era to the present day. To answer the overarching research question, we would like to concentrate on the mission time total taken based on related variables. 
+Analyze the evolution of space missions over time, such as changes in the frequency of missions, duration (hours in mission). This could offer insights into how space exploration has evolved from the Cold War era to the present day. To answer the overarching research question, we would like to concentrate on the mission time total taken based on related variables. 
 
 ## Data Background
 
 The dataset, meticulously compiled from various sources including NASA, Roscosmos, and enthusiast-driven websites, offers information of astronautical information. It encapsulates a wide array of data points ranging from the astronauts' full names, gender, birth dates, and nationalities, to their military status and details regarding their selection programs. It is gathered and cleaned by a TidyTuesday contributor named Tom Mock.
 
 ### Display information about the dataset
-```{r cars}
+```{r}
 dim(astronauts)  # Number of rows and columns
 names(astronauts)  # First few rows
 astronauts %>% head()
 ```
 
+
+
 ## Cleaning the Data
 
-```{r pressure, echo=FALSE}
+```{r, echo=FALSE}
 
 # lowercase the occupation 
 astronauts <- astronauts %>%
@@ -99,7 +103,34 @@ log_transformed_astronauts$year_of_selection <- as.factor(log_transformed_astron
 ```
 
 
+### Helpful plots
 
+```{r}
+astronauts %>%
+  mutate(
+    year_of_mission = 10 * (year_of_mission %/% 10),
+    year_of_mission = factor(year_of_mission)
+  ) %>%
+  ggplot(aes(year_of_mission, hours_mission,
+    fill = year_of_mission, color = year_of_mission
+  )) +
+  geom_boxplot(alpha = 0.2, size = 1.5, show.legend = FALSE) +
+  scale_y_log10() +
+  labs(x = NULL, y = "Duration of mission in hours")
+# Scatter plot of career length vs. mission hours
+ggplot(astronauts, aes(x = total_hrs_sum, y = hours_mission, color = in_orbit)) +
+  geom_point() +
+  labs(title = "Career Length vs. Mission Hours",
+       x = "Total Career Hours",
+       y = "Mission Duration (hours)") +
+  scale_color_manual(values = rainbow(20))
+library(ggplot2)
+
+#  box plot of in_orbit vs. hours_mission
+ggplot(astronauts, aes(x = in_orbit, y = hours_mission)) +
+  geom_boxplot() +
+  labs(x = "In Orbit", y = "Hours of Mission", title = "Box Plot of In Orbit vs. Hours of Mission")
+```
 
 ## Methodology
 
@@ -121,16 +152,21 @@ log_transformed_astronauts$year_of_selection <- as.factor(log_transformed_astron
 hiera_1 <- readRDS("models/hierachical.rds")
 ```
 
-**Layer 1:** Model of how individual observations vary *within* each in-orbit space craft group \( j \)
-\[ Y_{ij} | \mu_j, \sigma \sim N(\mu_j, \sigma_y^2) \]
+**Layer 1:** Model of how individual observations vary *within* each in-orbit space craft group $j$
 
-**Layer 2:** Model of how means \( \mu_j \) vary *between* groups
-\[ \mu_j | \mu, \sigma_{\mu} \sim N(\mu, \sigma_{\mu}^2) \]
+$Y_{ij} | \mu_j, \sigma \sim N(\mu_j, \sigma_y^2)$
+
+**Layer 2:** Model of how means $\mu_j$ vary *between* groups
+
+$\mu_j | \mu, \sigma_{\mu} \sim N(\mu, \sigma_{\mu}^2)$
 
 **Layer 3:** Priors on global parameters
-\[ \mu \sim N(m, s^2) \]
-\[ \sigma_y \sim \text{Exp}(l_y) \]
-\[ \sigma_{\mu} \sim \text{Exp}(l_{\mu}) \]
+
+$\mu \sim N(m, s^2)$
+
+$\sigma_y \sim \text{Exp}(l_y)$
+
+$\sigma_{\mu} \sim \text{Exp}(l_{\mu})$
 
 ### Evaluation
 ```{r}
@@ -225,6 +261,7 @@ hiera_predict_2
 ```
 On average, the log (of mission hours) deviate from the actual by 0.388. This metric is higher than model 1 above. 
 
+
 ## Conclusion
 
 Throughout this project, our primary goal was to analyze the evolution of space mission hours over time, with a specific focus on mission frequency, occupation and year of astronaut selection.By utilizing the data set, we were able to explore a variety of factors influencing the mission times of astronauts across different orbital missions.
@@ -244,4 +281,119 @@ The second, more complex model did not improve on the predictive accuracy of the
 
 These results highlight the challenges in statistical modeling of astronautical data, and the complexity of the dataset itself. Overfitting remains a critical concern, especially when the inclusion of multiple predictors does not necessarily lead to better predictions. Future research could take place on exploring alternative modeling or incorporating different sets of predictors that might better account for the variations observed in the data. Additionally, expanding the dataset to include more recent and diverse missions could help in developing more suitable models.
 
+## Addition model of each in_orbit groups
+```{r}
+astronauts %>%
+  count(in_orbit, sort = TRUE)
+```
+
+Considering the number of data we have for each in_orbit group, we will only model the group that have data above 50
+
+### ISS
+```{r}
+# Subset the dataset to include only rows where in_orbit is "ISS"
+ISS_data <- log_transformed_astronauts[log_transformed_astronauts$in_orbit == "ISS", ]
+
+```
+```{r}
+model_ISS <- stan_glm(
+  log_hours_mission ~ 1 + field21 + occupation + total_number_of_missions + year_of_selection, data = ISS_data,
+  family = gaussian,
+  chains = 4, iter = 5000*2, seed = 84735, refresh = 0)
+```
+```{r}
+pp_check(model_ISS)
+saveRDS(model_ISS, "model_ISS")
+```
+### Mir
+```{r}
+Mir_data <- log_transformed_astronauts[log_transformed_astronauts$in_orbit == "Mir", ]
+
+```
+```{r}
+model_Mir <- stan_glm(
+  log_hours_mission ~ 1 + field21 + occupation + total_number_of_missions + year_of_selection, data = Mir_data,
+  family = gaussian,
+  chains = 4, iter = 5000*2, seed = 84735, refresh = 0)
+```
+```{r}
+pp_check(model_Mir)
+saveRDS(model_Mir, "model_Mir")
+```
+### Salyut
+```{r}
+Salyut_data <- log_transformed_astronauts[log_transformed_astronauts$in_orbit == "Salyut", ]
+
+model_Salyut <- stan_glm(
+  log_hours_mission ~ 1 + field21 + occupation + total_number_of_missions + year_of_selection, data =Salyut_data,
+  family = gaussian,
+  chains = 4, iter = 5000*2, seed = 84735, refresh = 0)
+pp_check(model_Salyut)
+saveRDS(model_Salyut, "model_Salyut")
+```
+### Soyuz
+```{r}
+Soyuz_data <- log_transformed_astronauts[log_transformed_astronauts$in_orbit == "Soyuz", ]
+
+
+model_Soyuz <- stan_glm(
+  log_hours_mission ~1 + field21 + occupation + total_number_of_missions + year_of_selection, data =Soyuz_data,
+  family = gaussian,
+  chains = 4, iter = 5000*2, seed = 84735, refresh = 0)
+pp_check(model_Soyuz)
+saveRDS(model_Soyuz, "model_Soyuz")
+```
+### STS
+```{r}
+STS_data <- log_transformed_astronauts[log_transformed_astronauts$in_orbit == "STS", ]
+
+model_STS <- stan_glm(
+  log_hours_mission ~ 1 + field21 + occupation + total_number_of_missions + year_of_selection, data =STS_data,
+  family = gaussian,
+  chains = 4, iter = 5000*2, seed = 84735, refresh = 0)
+pp_check(model_STS)
+
+```
+```{r}
+tidy(model_STS, conf.int = TRUE, conf.level = 0.8)
+saveRDS(model_STS, "model_STS")
+```
+```{r}
+
+set.seed(84735)
+prediction_summary(model = model_STS, data =STS_data)
+```
+The mean absolute error is relatively low, indicating that on average, the predicted log hours of missions deviate from the actual by a small amount.
+
+
+### Model Analysis:
+
+From the posterior predictive checks only the STS model showed a great fit, thus the following analysis will be only focusing on the STS model. Factors that effected other models performance might be the insufficient data, since STS has a greater amount of data comparing to others. 
+
+For the peak of the observed data (`Y`) aligns well with the center of the posterior predictive distributions. This indicates that the model effectively captures the central tendency (mean) of the observed data, suggesting a good fit in terms of the average mission hours for STS missions. The posterior predictive distributions appear to capture the spread of the observed data reasonably well, though there is some variability in the tails of the distributions.
+
+### Coefficients Interpretation of STS model:
+- **Intercept (5.40485409)**: This represents the baseline log hours of mission for STS astronauts, with all other predictors held constant.
+- **Field21 (0.03365027)**: Every instances of extravehicular activities during the mission increase leads to an approximate increase of 0.03365 in the log hours, suggesting a positive influence on mission duration.
+- **Occupation**: Different occupations have differing impacts on mission duration. For example:
+  - **Flight Engineer (-0.06782086)**: Flight engineers have slightly lower mission hours compared to the baseline occupation.
+  - **MSP (-0.09444165)** and **Pilot (-0.14960477)**: Both occupations significantly reduce the mission hours, with pilots showing a more substantial decrease.
+  - **PSP (-0.08734932)**: Similar to MSPs, PSPs also have a reduction in mission hours, though the upper confidence interval nearly touches zero, indicating less certainty about the decrease.
+- **Total Number of Missions (0.02255374)**: Each additional mission an astronaut undertakes is associated with a slight increase in the log hours of their missions.
+- **Year of Selection**: The coefficients show varying impacts on mission hours depending on the year of selection. Notably:
+  - **1962 (-0.79800872)** and **1979 (-1.04133814)**: Selection in these years significantly decreases mission hours.
+  - **1991 (0.60011919)** and **1999 (0.46810752)**: Selection in these years increases mission hours, with 1991 showing a substantial positive effect.
+
+### Conclusion of STS
+
+The analysis of the STS model, focusing on the relationship between various predictors and the log-transformed hours of mission for STS astronauts, provides revelations about the dynamics of space missions over time. The findings indicate clear patterns and variations in mission duration that are significantly influenced by factors such as the astronaut's occupation, the total number of missions they have undertaken, and particularly the year of their selection.
+
+### Key Finds:
+- **Occupational Impact**: Different roles within the astronaut population, such as pilots, flight engineers, and mission specialists, demonstrate distinct impacts on mission duration. Notably, pilots and mission specialists tend to have shorter mission duration compared to other roles.
+- **Influence of Experience**: The positive correlation between the total number of missions and mission duration suggests that more experienced astronauts tend to have longer missions, potentially due to their involvement in more complex or extended missions.
+- **Temporal Variations**: The coefficients associated with the years of selection underscore significant changes over time, possibly reflecting shifts in mission objectives, technology, or operational strategies. This timeline of variations may correspond with the Cold War era and post-Cold War adjustments, reflecting how geopolitical tensions and subsequent cooperation influenced space exploration goals and astronaut training. For instance, the decrease in mission hours for selections in 1962 (-0.798) and 1979 (-1.041) reflect the intense periods of the Cold War where mission strategies were more conservative and risk-averse. Conversely, the increase in mission duration in 1991 (0.600) and 1999 (0.468) corresponds with the post-Cold War era, where there have been a shift towards more ambitious and prolonged missions as geopolitical tensions eased.
+
+## Bibliography
+
+Original data set from https://github.com/rfordatascience/tidytuesday/tree/master/data/2020/2020-07-14
 
