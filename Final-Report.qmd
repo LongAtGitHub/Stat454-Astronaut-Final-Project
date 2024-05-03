@@ -1,0 +1,228 @@
+---
+title: "STAT 454 Project Progress Report"
+authors: "Khaleesi Chen, Long Truong, Rana Rishmawi"
+output: html_document
+date: "2024-04-23"
+---
+
+## Set up
+```{r include = FALSE}
+knitr::opts_chunk$set(
+  warning = FALSE,
+  message = FALSE,
+  collapse = TRUE, 
+  fig.height = 3, 
+  fig.width = 5,
+  fig.align = 'center')
+```
+
+
+```{r setup, include=FALSE}
+library(bayesrules)
+library(tidyverse)
+library(dplyr)
+library(rstanarm)
+library(broom.mixed)
+library(tidybayes)
+library(bayesplot)
+astronauts <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-07-14/astronauts.csv')
+```
+
+## Research Goals
+
+Analyze the evolution of space missions over time, such as changes in the frequency of missions, duration (hours in mission), and the shift from military to civilian astronauts. This could offer insights into how space exploration has evolved from the Cold War era to the present day. To answer the overarching research question, we would like to concentrate on the mission time total taken based on related variables. 
+
+## Data Background
+
+The dataset, meticulously compiled from various sources including NASA, Roscosmos, and enthusiast-driven websites, offers information of astronautical information. It encapsulates a wide array of data points ranging from the astronauts' full names, gender, birth dates, and nationalities, to their military status and details regarding their selection programs. It is gathered and cleaned by a TidyTuesday contributor named Tom Mock.
+
+### Display information about the dataset
+```{r cars}
+dim(astronauts)  # Number of rows and columns
+names(astronauts)  # First few rows
+astronauts %>% head()
+```
+
+## Cleaning the Data
+
+```{r pressure, echo=FALSE}
+
+# lowercase the occupation 
+astronauts <- astronauts %>%
+  mutate(occupation = tolower(occupation))
+
+occupation_counts <- astronauts %>%
+  count(occupation, sort = TRUE)
+
+# Convert all in_orbit values to the same title format and remove numbers behind
+astronauts <- astronauts %>%
+  mutate(in_orbit = gsub("[0-9]", "", in_orbit)) %>%
+  mutate(in_orbit = gsub("-", " ", in_orbit))
+
+# Remove extra spaces after "STS" in the in_orbit column
+astronauts <- astronauts %>%
+  mutate(in_orbit = gsub("STS\\s+", "STS ", in_orbit))
+
+
+# Remove all non-alphanumeric characters except spaces
+astronauts <- astronauts %>%
+  mutate(in_orbit = gsub("[^[:alnum:]\\s]", "", in_orbit))
+
+# Remove extra spaces
+astronauts <- astronauts %>%
+  mutate(in_orbit = gsub("\\s+", " ", in_orbit))
+
+astronauts <- astronauts %>%
+  mutate(in_orbit = gsub(".*STS.*", "STS", in_orbit)) %>%
+  mutate(in_orbit = gsub(".*Soyuz.*", "Soyuz", in_orbit)) %>%
+  mutate(in_orbit = gsub(".*[Aa]pollo.*", "Apollo", in_orbit)) %>%
+  mutate(in_orbit = gsub(".*[Gg]emini.*", "Gemini", in_orbit)) %>%
+  mutate(in_orbit = gsub(".*Mir.*", "Mir", in_orbit)) %>%
+  mutate(in_orbit = gsub(".*Saluyt*", "Salyut", in_orbit)) 
+
+
+# Filter out rows with 0 hours_mission
+astronauts <- astronauts %>%
+  filter(hours_mission != 0)
+
+# Log-transform the hours_mission variable
+log_transformed_astronauts <- astronauts %>%
+  mutate(log_hours_mission = log(hours_mission))  # Adding 1 to avoid log(0)
+
+# factorize desired column vars
+
+log_transformed_astronauts$in_orbit <- as.factor(log_transformed_astronauts$in_orbit)
+log_transformed_astronauts$nationality <- as.factor(log_transformed_astronauts$nationality)
+log_transformed_astronauts$sex <- as.factor(log_transformed_astronauts$sex)
+log_transformed_astronauts$occupation <- as.factor(log_transformed_astronauts$occupation)
+log_transformed_astronauts$year_of_selection <- as.factor(log_transformed_astronauts$year_of_selection)
+```
+
+
+
+
+## Methodology
+
+- We propose 2 models
+- Model 1 is a hierachical model with only a single predictor
+- Model 2 is a hierachical model with multiple predictors
+
+## Model  1
+
+### Constructing
+```{r}
+# hiera_1 <- stan_glmer(
+#  log_hours_mission ~ (1 | in_orbit), data = log_transformed_astronauts,
+#   family = gaussian,
+#   chains = 4, iter = 1000*2, seed = 84735, refresh = 0)
+
+# (complete_pooled, "models/hierachical.rds")
+
+hiera_1 <- readRDS("models/hierachical.rds")
+```
+
+**Layer 1:** Model of how individual observations vary *within* each in-orbit space craft group \( j \)
+\[ Y_{ij} | \mu_j, \sigma \sim N(\mu_j, \sigma_y^2) \]
+
+**Layer 2:** Model of how means \( \mu_j \) vary *between* groups
+\[ \mu_j | \mu, \sigma_{\mu} \sim N(\mu, \sigma_{\mu}^2) \]
+
+**Layer 3:** Priors on global parameters
+\[ \mu \sim N(m, s^2) \]
+\[ \sigma_y \sim \text{Exp}(l_y) \]
+\[ \sigma_{\mu} \sim \text{Exp}(l_{\mu}) \]
+
+### Evaluation
+```{r}
+astronaut_means <- log_transformed_astronauts %>%
+  group_by(in_orbit) %>%
+  summarize(count = n(), mission = mean(log_hours_mission))
+set.seed(84735)
+
+predictions_complete <-  posterior_predict(
+  hiera_1, newdata = astronaut_means)
+
+set.seed(84735)
+```
+
+
+### posterior predictive check
+
+```{r}
+ppc_intervals(astronaut_means$mission, yrep = predictions_complete,
+              prob_outer = 0.80) +
+  ggplot2::scale_x_continuous(
+    labels = astronaut_means$in_orbit,
+    breaks = 1:nrow(astronaut_means)) +
+    xaxis_text(angle = 90, hjust = 1)
+```
+
+The hierarchical predictive models are centered very near at the observed sample means.
+
+```{r}
+pp_check(hiera_1)
+```
+
+Dual Peaks: Both the observed data (Y) and the replicated data (Y_rep) exhibit a bimodal distribution with two prominent peaks. This suggests that the data might be representing two distinct groups or conditions within the dataset.
+Alignment of Peaks: The peaks of the replicated data generally align with those of the observed data, which is a positive indication that the model captures the central tendencies of the data correctly for both groups
+
+### MAE score
+```{r}
+prediction_summary(model = hiera_1, data =log_transformed_astronauts)
+```
+On average, the log (of mission hours) deviate from the actual by 0.249.
+
+### Your mission time vs STS astronauts'
+```{r}
+set.seed(84735)
+predictions_complete_2 <- posterior_predict(
+  hiera_1,
+  newdata = data.frame(in_orbit = c("You", "STS")))
+
+# Plot the posterior predictive models
+mcmc_areas(predictions_complete_2, prob = 0.8) +
+  xlab("hours") +
+  ggplot2::scale_y_discrete(labels = c("You", "STS"))
+
+```
+The plot of your mission time has higher uncertainty since we do not have enough data on you to make good prediction.
+
+
+## Model 2 
+
+### Constructing
+```{r}
+# hiera <- stan_glmer(
+#  log_hours_mission ~ 
+#    (1 | in_orbit) + 
+#     occupation + 
+#    total_number_of_missions +
+#    year_of_selection +
+#    field21
+#  
+#  , data = log_transformed_astronauts,
+#   family = gaussian,
+#   chains = 4, iter = 1000*2, seed = 84735, refresh = 0)
+
+# saveRDS(hiera, "models/new_hierachical.rds")
+
+hiera_2 <- readRDS("models/new_hierachical.rds")
+```
+
+### Evaluation
+```{r}
+pp_check(hiera_2)
+```
+This plot shows identical shape to the posterior predictive check above although this model is more complicated than the one above. 
+
+```{r}
+# prediction summary
+# hiera_predict_2 <- prediction_summary(model = hiera_2, data=log_transformed_astronauts)
+# 
+# saveRDS(hiera_predict_2, "hierachical_model_2_predict_cv")
+hiera_predict_2 <- readRDS("other_states/hierachical_model_2_predict")
+hiera_predict_2
+```
+On average, the log (of mission hours) deviate from the actual by 0.388. This metric is higher than model 1 above. 
+
+

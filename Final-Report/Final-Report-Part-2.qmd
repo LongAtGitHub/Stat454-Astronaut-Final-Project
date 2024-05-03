@@ -41,7 +41,7 @@ log_transformed_astronauts <- read_csv("cleaned_data.csv")
 ## Addition model of each in_orbit groups
 
 ```{r}
-astronauts %>%
+log_transformed_astronauts %>%
   count(in_orbit, sort = TRUE)
 ```
 
